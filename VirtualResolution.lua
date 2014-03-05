@@ -43,7 +43,7 @@ virtualResolution:initialiseForUserCoordSpace(userSpaceW, userSpaceH)
 
 -- Then create scenes with director:createScene(...
 
-virtualResolution:setScene(myScene)
+virtualResolution:applyToScene(myScene)
 -- Then call this for each scene you want to use virtual resolution on
 
 virtualResolution:scaleTouchEvents(true)
@@ -73,7 +73,7 @@ end
 virtualResolution:getWinX(userX)
 virtualResolution:getWinX(userY)
 -- Use these to translate user space to world space. Useful if you have NOT
--- called virtualResolution:setScene(myScene) and want to scale everything
+-- called virtualResolution:applyToScene(myScene) and want to scale everything
 -- manaully.
 
 virtualResolution:updateWindowSize()
@@ -83,7 +83,7 @@ virtualResolution:initialiseForUserCoordSpace(...)
 -- Call this again if you want to change virtual resolution!
 
 myScene.scalerRootNode
--- This node is added to a scene by virtualResolution:setScene() and does
+-- This node is added to a scene by virtualResolution:applyToScene() and does
 -- the scaling. You can play with it manually if you want :)
 
 virtualResolution:releaseScene(myScene, [false])
@@ -95,7 +95,7 @@ virtualResolution:releaseScene(myScene, [false])
 -- need this at all. There's No need to call this on transitioning from a scene
 
 myScene:addChildNoTrans(node)
--- Calling virtualResolution:setScene() will cause the scenes :addChild()
+-- Calling virtualResolution:applyToScene() will cause the scenes :addChild()
 -- calls to be redirected to myScene.scalerRootNode:addChild(). The original
 -- method is "backed-up" via .addChildNoTrans. So, you can use
 -- myScene:addChildNoTrans(node) to bypass virtual resolution and add nodes
@@ -149,7 +149,7 @@ end
 
 -- Set a scene to be scaled and offset. Quality will depend on how well GL
 -- scales everything
-function virtualResolution:setScene(scene, transformActualScene)
+function virtualResolution:applyToScene(scene, transformActualScene)
     -- Sadly Quick does not handle transitions well with scaling of the scene object itself.
     -- What happens is the scene jumps between it's untransformed and scaled/positioned
     -- state during transitions, which looks poor. Adding scene:sync() doesnt fix,
@@ -157,12 +157,12 @@ function virtualResolution:setScene(scene, transformActualScene)
     -- Marmalade ticket MAINT-2657 was opened to look into this.
     
     if not self.setup then
-        dbg.assert("virtualResolution:setScene called before initialiseForUserCoordSpace")
+        dbg.assert("virtualResolution:applyToScene called before initialiseForUserCoordSpace")
         return
     end
     
     if scene.scalerRootNode then
-        dbg.assert("virtualResolution:setScene called for scene already using virtual resolution")
+        dbg.assert("virtualResolution:applyToScene called for scene already using virtual resolution")
         return
     end
     
@@ -303,7 +303,7 @@ function virtualResolution:winToUserSize(winSize)
 end
 
 -- Scale from user to world space.
--- Can use instead of virtualResolution:setScene()
+-- Can use instead of virtualResolution:applyToScene()
 -- You will then need to manually scale every value, including velocities etc.
 -- e.g createNode(posx, posy) -> createNode(vr.x(posx), vr.y(posy))
 -- Note that this may be useful if you want lots of control,
