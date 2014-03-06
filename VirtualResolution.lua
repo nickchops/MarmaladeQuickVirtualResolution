@@ -13,10 +13,14 @@
     Can optionally scale touch events, but this has a performance hit and is
     pretty hacky! Note that Quick always returns *world* coord touch events.
   
-    It is recommended to scale touches using:
-        virtualResolution:getUserX(x) -> screen to user world coords
-        getLocalCoords(worldX, worldY, localNode) -> screen to "local" coords -
-            return value is relative to localNode
+    It is recommended to scale touches using either:
+        virtualResolution:getUserX(x) -> screen to user "world" coords
+    or
+        getLocalCoords(worldX, worldY, localNode) -> screen to "local" coords
+            Here, the returned values are relative to localNode.
+            More powerful as it can go any depth down a child tree.
+            From https://github.com/nickchops/MarmaladeQuickNodeUtility
+            - not part of VirtualResolution.
   
     How it works:
     It adds a node called "scalerRootNode" to the scene, applies transforms to
@@ -212,12 +216,18 @@ function virtualResolution:releaseScene(scene, keepChildren)
     scene.scalerRootNode = nil
 end
 
+-----------------------------------------------------------------------------
+
+-- Experimental support for auto-scaling touch event positions
+
 -- Call with true to make all touch listers event.x/y be scaled to user coordinates
 -- Call with false to reset to default behaviour (event coords are world space)
 -- Off by default.
 -- This is quite a hack! It is recommened to use virtualResolution:getUserX()
 -- or getLocalCoords() inside event listeners instead.
--- Using scaleTouchEvents has the advantage that all touches are in user world space
+-- Note that getLocalCoords is from github.com/nickchops/MarmaladeQuickNodeUtility
+--
+-- Using scaleTouchEvents has the advantage that all touches become in user-space
 -- with zero changes to code but it will be slower as it adds a function call and
 -- some amount of comparisons and table lookups for every event that ever fires!
 -- Why? Because the safest place to override x&y is on event listener calls, but
@@ -279,7 +289,7 @@ function virtualResolutionHandleEventWithListenerOverride(event, listener)
     return virtualResolution.handleEventWithListener(event, listener)
 end
 
----------------------------
+-----------------------------------------------------------------------------
 
 -- Getters for transforming between coord spaces
 
@@ -303,11 +313,12 @@ function virtualResolution:winToUserSize(winSize)
 end
 
 -- Scale from user to world space.
--- Can use instead of virtualResolution:applyToScene()
+-- Can use *instead of* virtualResolution:applyToScene(myScene)
 -- You will then need to manually scale every value, including velocities etc.
 -- e.g createNode(posx, posy) -> createNode(vr.x(posx), vr.y(posy))
 -- Note that this may be useful if you want lots of control,
--- e.g. scale vector coords but not line widths
+-- e.g. scale vector coords but not line widths. Useful for drawing things
+-- like on screen controls using user coords but with crisp world space display
 
 function virtualResolution:getWinX(userX)
     return userX * self.scale + self.xOffset
@@ -317,59 +328,3 @@ function virtualResolution:getWinY(userY)
     return userY * self.scale + self.yOffset
 end
 
-----------------------------------------------------------------
-
--- These dont rely on virtualResolution at all
--- They just recursively calculate world and local coords by following parent
--- references. If there is a scalerRootNode then that will be included like
--- any other node. It's recommended to use these inside touch events instead of
--- virtualResolution:scaleTouchEvents - minimises work and avoids hacking
--- with the Quick engine.
-
--- get world coords of a node's x & y pos
-function getWorldCoords(n)
-    local worldX = n.x
-    local worldY = n.y
-    n = n.parent
-    while n do
-        worldX = worldX * n.xScale + n.x
-        worldY = worldY * n.yScale + n.y
-        n = n.parent
-    end
-    return worldX, worldY
-end
-
-function getWorldCoordX(n)
-    local worldX = n.x
-    n = n.parent
-    while n do
-        worldX = worldX * n.xScale + n.x
-        n = n.parent
-    end
-    return worldX
-end
-
-function getWorldCoordY(n)
-    local worldY = n.y
-    n = n.parent
-    while n do
-        worldY = worldY * n.yScale + n.y
-        n = n.parent
-    end
-    return worldY
-end
-
--- localNode is the node whos x & y marks the origins of a local coord space
--- Use this to get position relative to the node of a world coord
-function getLocalCoords(worldX, worldY, localNode)
-    local localX = worldX
-    local localY = worldY
-    local n = localNode.parent
-    while n do
-        localX = (localX - n.x) / n.xScale
-        localY = (localY - n.y) / n.yScale
-        n = n.parent
-    end
-    return localX, localY
-end
- 

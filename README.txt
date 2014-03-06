@@ -19,10 +19,13 @@ Can optionally scale touch events, but this has a performance hit and is
 pretty hacky!
 
 Note that Quick always returns *world* coord touch events so it is
-recommended to scale touches using:
-	virtualResolution:getUserX(x) -> screen to user world coords
-	getLocalCoords(worldX, worldY, localNode) -> screen to "local" coords -
-		return value is relative to localNode
+recommended to scale touches using either:
+    virtualResolution:getUserX(x)
+        -> screen to user world coords
+or
+    getLocalCoords(worldX, worldY, localNode)
+        -> screen to "local" coords - return value is relative to localNode
+        NB: from https://github.com/nickchops/MarmaladeQuickNodeUtility
 
 How it works:
 It adds a node called "scalerRootNode" to the scene, applies transforms to
