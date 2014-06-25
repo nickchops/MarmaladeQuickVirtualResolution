@@ -3,15 +3,37 @@
     (C) Nick Smith 2014
     Flexible virtual resolution system for use with Marmalade Quick
     
-    Implements a virtual resolution scaling system, with letterboxes that can
-    be drawn over. A singleton table scales a scene between user coord space &
-    screen/window space
+    Implements a virtual resolution scaling system, with letterbox areas that
+    can just be drawn over. A singleton table scales a scene between user coord
+    space & screen/window space.
   
     Overview:
-    Set the size of the coordinate space you want to use for the scene, set the
-    scene and then it will silently scale everything up to screen size.
-    Can optionally scale touch events, but this has a performance hit and is
-    pretty hacky! Note that Quick always returns *world* coord touch events.
+    Set the size of the coordinate space you want to use for the scene, then
+    pass references to any scenes you want to be scaled and then it will
+    silently scale everything up to screen size.
+    
+    Can optionally:
+    - "override" the window size. Setting window smaller than the real window
+      will result in extra border area around all 4 sides
+    - use "nearestMultiple" which overrides window size to be largest size
+      that is both a multiple of the user size and <= screen size. This
+      scales up but makes sure that every userspace pixel translates to an
+      integer value so the result is pixel-perfect, e.g. 1 pixel -> 2/3/4/etc.
+      pixels, rather than 1 pixel -> 1.5/2.7/3.1/etc. pixels.
+      - ignoreMultipleIfTooSmall. You can use this with nearestMultiple as a
+        gating factor. If the scaled up size would be less than this fraction
+        of the screen W or H (whichever is the control axis), then
+        nearestMultiple is ignored.
+    - Use forceScale which sets a fraction (0->1) of the width or height
+      (whichever ends up being the most "full") to scale up to. Ensures
+      a border of this amount on all sides. Ignored if nearestMultiple
+      is set and succeeds, but used if nearestMultiple is set but fails
+      due to ignoreMultipleIfTooSmall.
+    - scale touch events, but this has a performance hit and is pretty hacky
+      so not recommended!
+      
+    Note that Quick always returns *world* coord touch events so you will
+    usually want to scale those.
   
     It is recommended to scale touches using either:
         virtualResolution:getUserX(x) -> screen to user "world" coords
@@ -19,18 +41,19 @@
         getLocalCoords(worldX, worldY, localNode) -> screen to "local" coords
             Here, the returned values are relative to localNode.
             More powerful as it can go any depth down a child tree.
-            From https://github.com/nickchops/MarmaladeQuickNodeUtility
+            This is in https://github.com/nickchops/MarmaladeQuickNodeUtility
             - not part of VirtualResolution.
   
-    How it works:
-    It adds a node called "scalerRootNode" to the scene, applies transforms to
-    that and then overrides the scene node to add children to scalerRootNode
-    instead of itself.
+    How it all works:
+    When you call applyToScene(), it adds a node called "scalerRootNode" to the
+    scene, applies transforms to that and then overrides the scene node to add
+    children to scalerRootNode instead of to itself.
   
-    Be careful if you use myScene.children. For example, if you loop through
-    myScene.children to destroy all visual nodes, you will also destroy the
-    scalerRootNode and cause havock :) It's recommeneded to always have an
-    "origin" node in a scene, or use scene.children and explicitly ignore
+    Be careful if you every use myScene.children. For example, if looping 
+    through myScene.children to destroy all visual nodes, you will also
+    destroy the scalerRootNode and cause havock :) It's recommeneded to always
+    have an "origin" node in a scene (avoids general issues with scenes), or
+    if not then when using scene.children make sure you explicitly ignore
     scene.scalerRootNode.
 ]]--
 
@@ -42,8 +65,29 @@ virtualResolution = {}
 --Basics
 
 virtualResolution:initialiseForUserCoordSpace(userSpaceW, userSpaceH)
--- Call this first, with width and height of "user space", aka "virtual resolution"
--- This will also get the window sizes and work out scaling and offset to apply
+-- Call this first, with width and height of "user space", aka "virtual
+-- resolution". This will also get the window sizes and work out scaling
+-- and offset to apply
+
+Or, for more control, use:
+initialise(vals)
+-- Uses {} format for ease of use :) e.g. call it like this:
+--  virtualResolution:initialiseForUserCoordSpace{userSpaceW=1200, userSpaceH=300}
+--
+-- Optional:
+-- - Window size to scale up to is usually autodetected. You can override this
+--   and force the window size using windowOverrideW and windowOverrideH. e.g.
+--   Set this to half window real size for the output to be small and centered
+--   with lots of black space around it. Useful is you want explicit sizes for
+--   areas in the letterboxes where on-screen controls will go.
+--
+-- - Setting nearestMultiple=true will cause the window size values to be the
+--   largest integer multiples of the userspace sizes that will fit on the
+--   screen. e.g. if app is in landscape, user height is 300 and screen height
+--   is 700, window height will be set to 600. This means every pixel maps to
+--   exactly 2 pixels, with some additional padding added. Useful if you
+--   want "pixel-perfect" upscaling, but will increase letterboxing.
+--   nearestMultiple is ignored if windowOverrideW or windowOverrideH is set.
 
 -- Then create scenes with director:createScene(...
 
@@ -80,11 +124,12 @@ virtualResolution:getWinX(userY)
 -- called virtualResolution:applyToScene(myScene) and want to scale everything
 -- manaully.
 
-virtualResolution:updateWindowSize()
--- Call this is the window size changes (eg on desktop) to re-configure
+virtualResolution:update()
+-- Call this if the window size changes - eg on desktop stretch or device
+-- rotation - to re-configure everything
 
-virtualResolution:initialiseForUserCoordSpace(...)
--- Call this again if you want to change virtual resolution!
+virtualResolution:initialise(...)
+-- Call this again if you want to change userspace resolution
 
 myScene.scalerRootNode
 -- This node is added to a scene by virtualResolution:applyToScene() and does
@@ -107,45 +152,53 @@ myScene:addChildNoTrans(node)
 
 ]]--
 
---TODO add built in options for letterbox/borders
+--TODO add built in options for drawing fancy letterbox/borders
 
 -----------------------------------------
 
--- Setup functions
+-- Public setup functions
 
-function virtualResolution:updateWindowSize()
-    self.winW = director.displayWidth
-    self.winH = director.displayHeight
-    self:update()
-end
-
+--simple version
 function virtualResolution:initialiseForUserCoordSpace(userSpaceW, userSpaceH)
-    self.userW = userSpaceW
-    self.userH = userSpaceH
+    virtualResolution:initialise{userSpaceW, userSpaceH}
+end
+
+--full version
+function virtualResolution:initialise(vals)
+    self.userW = vals.userSpaceW
+    self.userH = vals.userSpaceH
+    self.windowOverrideW = vals.windowOverrideW
+    self.windowOverrideH = vals.windowOverrideH
+    self.nearestMultiple = vals.nearestMultiple
+    self.ignoreMultipleIfTooSmall = vals.ignoreMultipleIfTooSmall
+    self.forceScale = vals.forceScale
+    self.maxScreenW = vals.maxScreenW
+    self.maxScreenH = vals.maxScreenH
     self:update()
 end
-    
+
 function virtualResolution:update()
-    if not self.winW then
-        self:updateWindowSize()
+    if not self.userW then
+        dbg.print("must call initialise or initialiseForUserCoordSpace before update")
+        return
     end
     
-    if not self.userW then
-        self.userW = self.winW
-        self.userH = self.winH
-    end
+    self.winW = self.windowOverrideW or director.displayWidth
+    self.winH = self.windowOverrideH or director.displayHeight
     
     self.winAspect = self.winW / self.winH
     self.userAspect = self.userW / self.userH
     
     if self.winAspect < self.userAspect then
+        self.scaleIn = "width"
         self.scale = self.winW / self.userW
-        self.yOffset = (self.winH - self.userH*self.scale) / 2
-        self.xOffset = 0
+        self:doMultipleAndOffset()
+        self.yOffset = self.yOffset + (self.winH - self.userH*self.scale) / 2
     else
+        self.scaleIn = "height"
         self.scale = self.winH / self.userH
-        self.yOffset = 0
-        self.xOffset = (self.winW - self.userW*self.scale) / 2
+        self:doMultipleAndOffset()
+        self.xOffset = self.xOffset + (self.winW - self.userW*self.scale) / 2
     end
     
     self.setup = true
@@ -161,12 +214,7 @@ function virtualResolution:applyToScene(scene, transformActualScene)
     -- Marmalade ticket MAINT-2657 was opened to look into this.
     
     if not self.setup then
-        dbg.assert("virtualResolution:applyToScene called before initialiseForUserCoordSpace")
-        return
-    end
-    
-    if scene.scalerRootNode then
-        dbg.assert("virtualResolution:applyToScene called for scene already using virtual resolution")
+        dbg.assert("virtualResolution:applyToScene called before initialise or initialiseForUserCoordSpace")
         return
     end
     
@@ -186,25 +234,101 @@ function virtualResolution:applyToScene(scene, transformActualScene)
     -- To support transitions and get more control generally, we have to create
     -- a node, scale and move that, and override how the scene adds children
    
-    scene.scalerRootNode = director:createNode({x=self.xOffset, y=self.yOffset, xScale=self.scale, yScale = self.scale})
-    if not director.addNodesToScene or scene ~= director:getCurrentScene() then
-        scene:addChild(scalerRootNode)
+    if scene.scalerRootNode then
+        dbg.print("virtualResolution:applyToScene called for scene already using virtual resolution - updating values")
+        scene.scalerRootNode.x=self.xOffset
+        scene.scalerRootNode.y=self.yOffset
+        scene.scalerRootNode.xScale=self.scale
+        scene.scalerRootNode.yScale = self.scale
+    else
+        scene.scalerRootNode = director:createNode({x=self.xOffset, y=self.yOffset, xScale=self.scale, yScale = self.scale})
+        if not director.addNodesToScene or scene ~= director:getCurrentScene() then
+            scene:addChild(scalerRootNode) --already added via createNode() above otherwise
+        end
+        
+        -- Override scene:addChild() to call scene.scalerRootNode:addChild()
+        -- Note that we cant just do scene.addChild = scene.scalerRootNode.addChild
+        -- because those .addChild functions are the same actual function value! It's the
+        -- "self" value passed implicitly via : mechanism that determins which node is used!
+        scene.addChildNoTrans = scene.addChild -- keep a backup so user can still add "window space" nodes
+        scene.addChild = virtualResolutionSceneAddChildOverride
+        
+        -- note that scene:addChild() is called internally via director:addNodeToLists()
+        -- on director:createXXX() calls if director.addNodesToScene is true
+    end
+end
+
+---------------------------
+-- internal setup functions
+
+function virtualResolution:doMultipleAndOffset()
+    if not (windowOverrideW or windowOverrideH) then
+        local scaledDiff
+        local nearestMultipleFailed = false
+        
+        -- optionally adjust scaling to next lowest integer value
+        if self.nearestMultiple then
+            self.scale = math.floor(self.scale)
+            self.winW = self.scale * self.userW
+            self.winH = self.scale * self.userH
+            
+            if self.ignoreMultipleIfTooSmall then 
+                if self.scaleIn == "width" then
+                    scaledDiff = self.winW / director.displayWidth
+                else
+                    scaledDiff = self.winH / director.displayHeight
+                end
+                
+                if scaledDiff < self.ignoreMultipleIfTooSmall then
+                    nearestMultipleFailed = true
+                end
+            end
+        end
+        
+        -- optionally set to specific scale (ignored if nearest multiple succeeded)
+        if self.forceScale and (nearestMultipleFailed or not self.nearestMultiple) then
+            -- scale so view fills given fraction of the sclaing axis (width or height)
+            if self.scaleIn == "width" then
+                self.winW = self.forceScale * director.displayWidth
+                self.scale = self.winW/self.userW
+                self.winH = self.scale * self.userH
+            else
+                self.winH = self.forceScale * director.displayHeight
+                self.scale = self.winH/self.userH
+                self.winW = self.scale * self.userW
+            end
+        
+        -- optionally lock to max width or heigh fractions (0->1) if greater than those
+        else
+            if self.maxScreenW then
+                scaledDiff = self.winW / director.displayWidth
+                if scaledDiff > self.maxScreenW then
+                    self.winW = self.maxScreenW * director.displayWidth
+                    self.scale = self.winW/self.userW
+                    self.winH = self.scale * self.userH
+                end
+            end
+            if self.maxScreenH then
+                scaledDiff = self.winH / director.displayHeight
+                if scaledDiff > self.maxScreenH then
+                    self.winH = self.maxScreenH * director.displayHeight
+                    self.scale = self.winH/self.userH
+                    self.winW = self.scale * self.userW
+                end
+            end
+        end
     end
     
-    -- Override scene:addChild() to call scene.scalerRootNode:addChild()
-    -- Note that we cant just do scene.addChild = scene.scalerRootNode.addChild
-    -- because those .addChild functions are the same actual function value! It's the
-    -- "self" value passed implicitly via : mechanism that determins which node is used!
-    scene.addChildNoTrans = scene.addChild -- keep a backup so user can still add "window space" nodes
-    scene.addChild = virtualResolutionSceneAddChildOverride
-    
-    -- note that scene:AddChild() is called internally via director:addNodeToLists()
-    -- on director:createXXX() calls if director.addNodesToScene is true
+    self.xOffset = (director.displayWidth - self.winW)/2 --zero if not forcing window size
+    self.yOffset = (director.displayHeight - self.winH)/2
 end
+
 
 function virtualResolutionSceneAddChildOverride(self, n)
     self.scalerRootNode:addChild(n)
 end
+--------------------------------------
+--Public release function
 
 -- note that you likley only ever want to call this if destroying a scene or
 -- turning off virtual resolution (rare!). For the later, you will want to

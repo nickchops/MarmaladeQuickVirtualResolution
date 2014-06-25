@@ -98,6 +98,11 @@ virtualResolution:initialiseForUserCoordSpace(userSpaceW, userSpaceH)
 
    Then create scenes with director:createScene(...
 
+virtualResolution:initialise(vals)
+   use this version for more options.
+   Uses {} format for ease of use :) e.g. call it like this:
+   virtualResolution:initialiseForUserCoordSpace{userSpaceW=1200, userSpaceH=300}
+
 virtualResolution:applyToScene(myScene)
    Then call this for each scene you want to use virtual resolution on
 
@@ -133,11 +138,14 @@ virtualResolution:getWinX(userY)
    called virtualResolution:applyToScene(myScene) and want to scale everything
    manually.
 
-virtualResolution:updateWindowSize()
-   Call this is the window size changes (e.g. on desktop) to re-configure
+virtualResolution:update()
+   Call this if the window size changes (e.g. on desktop) to re-configure
 
-virtualResolution:initialiseForUserCoordSpace(...)
+virtualResolution:initialise(...)
    Call this again if you want to change virtual resolution!
+
+virtualResolution:applyToScene(myScene)
+   If the window size changes, call this again to actually update the scene scaling
 
 myScene.scalerRootNode
    This node is added to a scene by virtualResolution:applyToScene() and does
@@ -158,24 +166,24 @@ myScene:addChildNoTrans(node)
    myScene:addChildNoTrans(node) to bypass virtual resolution and add nodes
    that are "in window space".
 
-   
+
 TODO: add built in options for letterbox/borders
 
 Provided under the MIT license:
 
 /*
  * (C) 2013-2014 Nick Smith.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
