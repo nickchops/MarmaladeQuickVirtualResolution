@@ -214,7 +214,7 @@ function virtualResolution:applyToScene(scene, transformActualScene)
     -- Marmalade ticket MAINT-2657 was opened to look into this.
     
     if not self.setup then
-        dbg.assert("virtualResolution:applyToScene called before initialise or initialiseForUserCoordSpace")
+        dbg.assert(false, "virtualResolution:applyToScene called before initialise or initialiseForUserCoordSpace")
         return
     end
     
