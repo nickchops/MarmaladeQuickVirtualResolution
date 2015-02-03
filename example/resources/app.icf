@@ -1,0 +1,7 @@
+[S3E]
+MemMgrMaxAllocWarning=0
+
+[GL]
+
+[QUICK]
+mainFilename="main.lua"
