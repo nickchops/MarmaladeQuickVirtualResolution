@@ -35,6 +35,7 @@ end
 function destroyNode(node)
     cancelTimersOnNode(node)
     cancelTweensOnNode(node)
+    if node.physics then physics:removeNode(node) end
     node:removeFromParent() --also sets parent's reference to this node to nil
     return nil -- calling myNode = destroyNode(myNode) sets ref to nil
                -- to match behaviour of node:removeFromParent()
