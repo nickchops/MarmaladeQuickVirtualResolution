@@ -17,8 +17,7 @@ Quick start
 Set the size of the coordinate space you want to use for the scene. For
 example, for 960x640 user space, call:
 
-        virtualResolution:initialise{userSpaceW=960, userSpaceH=640}
-        virtualResolution:applyToScene(myScene)
+    virtualResolution:initialise{userSpaceW=960, userSpaceH=640}
 
 Then, once you have created a scene, but before adding any nodes to it, call
 this to make a scene actually use the VR system:
@@ -77,7 +76,7 @@ You can call applyToScene for multiple scenes at the same time. There's no need 
 turn previous scenes off.
 
 You may want to draw overlays, or other things into the letterbox areas, but using
-user-space coordinates. The following are available to gice screen size and min/max
+user-space coordinates. The following are available to give screen size and min/max
 coords of the screen edge in user coordinates (e.g. userWinMinX might be -100)
 
     virtualResolution.userWinW
