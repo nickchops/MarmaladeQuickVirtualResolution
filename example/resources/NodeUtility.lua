@@ -2,7 +2,6 @@
 -- Utility functions for working with Marmalade Quick Node objects
 -- (C) Nick Smith 2014
 
-
 function cancelTimersOnNode(node, recursive)
     for k,v in pairs(node.timers) do
         v:cancel()
@@ -13,10 +12,17 @@ function cancelTimersOnNode(node, recursive)
         end
     end
 end
+
 function cancelTweensOnNode(node, recursive)
-    for k,v in pairs(node.tweens) do
-        tween:cancel(v)
+    --Docs state to not loop though node.tweens manually, but we're doing it anyway!
+    --NB: in SDK, tween:cancel() causes tween to be removed from node.tweens in an ipairs loop
+    --We're relying on that being true - using our own ipairs loop here would cause errors.
+    --Prob should also update tween:cancel in SDK to call break one it removes a tween
+    --for a tiny bit of performance (or replace SDK's loop with index by id or somesuch).
+    while node.tweens[1] do
+        tween:cancel(node.tweens[1])
     end
+    
     if recursive then
         for k,child in pairs(node.children) do
             cancelTweensOnNode(child)
@@ -70,7 +76,7 @@ function destroyNodesInTree(node, destroyRoot)
     --node in parent's .children array and uses table.remove.
     --For our loop, we can't use pairs() as order is not guaranteed. Can't use
     --ipairs as behaviour is undefined after table.remove during ipairs loop.
-    --So, we use a manual loop and know that the .remove call will collapse
+    --So, we use a manual loop and know that the SDK's .remove call will collapse
     --the tree meaning we don't need to increment the index.
     local i = 1
     while node.children[i] do
@@ -85,8 +91,8 @@ function destroyNodesInTree(node, destroyRoot)
     
     if destroyRoot then
         destroyNode(node)
-        return nil --allow user to call myNode = destroyNodesInTree(myNode, yes)
-                   --to also nil original reference
+        return nil --return nil allows user to call myNode = destroyNodesInTree(myNode, yes)
+                   --convenient way to nil reference and matches removeFromParent() behaviour
     end
     
     --we could probably make this more efficient by traversing the other
@@ -175,7 +181,7 @@ end
 --------------------------------------------------------------------
 -- scaling
 
--- TODO: Should "attach£ these to teh Node type so can just do myNode:setDefaultSize() etc
+-- TODO: In SDK itself, we should attach these to the Node type so can just do myNode:setDefaultSize() etc
 
 -- Sprites are the size of the file image by default and xScale/yScale is realtive to that
 -- You cant just set w and h on a sprite, its always the file size.
