@@ -134,6 +134,16 @@ function device:getInfo(v)
     end
 end
 
+--[[
+    /**
+    Sets device orientation
+    @param orientation - identifier with one of the possible values:
+    "free", "portrait", "portraitFixed", "landscape", "landscapeFixed".
+    */
+--]]
+function device:setOrientation(orientation)
+	quick.QDevice:setOrientation(orientation)
+end
 
 --[[
     /**

@@ -57,12 +57,32 @@ function physics:addNode(n, values)
 
 	self:_addNode(n)
 	local isSensor = false
+    
+    -- try to infer shape from Lines node
+    if n.coords and not values then
+        values = {}
+    end
+    
+    if n.coords and not values.shape and not values.radius then
+        dbg.print("lines object '" .. n.name .. "' added to physics without explicit shape set: using lines.coords for shape - will have undefined behaviour if shape is convex or has < 3 or > 8 points")
+        
+        if n:isClosed() then
+            values.shape = {select(3, unpack(n.coords))}
+        else
+            dbg.print("lines object '" .. n.name .. "' is not closed, but inferred physics shape will be closed")
+            values.shape = n.coords
+        end
+    end
+    
     if values then
 	    table.setValuesFromTable(n.physics, values)
 
         -- Add shape points?
         if values.shape then
             dbg.assert(type(values.shape) == "table")
+            local pointCount = table.getn(values.shape) / 2
+            dbg.assert(pointCount > 2 and pointCount < 9, "physics shapes must have 3-8 points but node '" .. n.name .. "' has " .. pointCount .. " points")
+            
             for i = 1,#values.shape,2 do
                 n.physics:_addShapePoint(values.shape[i+0], values.shape[i+1])
             end

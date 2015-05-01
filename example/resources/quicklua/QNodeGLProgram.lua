@@ -20,17 +20,25 @@
  * THE SOFTWARE.
  */--]]
 
-config =
-{
-	debug =
-	{
-        general = true, -- Turn on general debugging
-		assertDialogs = false, -- Display dialog boxes when asserting
-		typeChecking = true, -- Turn on type checking by default
-        traceGC = true, -- Trace info on object garbage collection
+--------------------------------------------------------------------------------
+-- Nodes
+-- NOTE: This file must have no dependencies on the ones loaded after it by
+-- openquick_init.lua. For example, it must have no dependencies on QDirector.lua
+--------------------------------------------------------------------------------
+QNodeGLProgram = {}
+QNodeGLProgram.__index = QNodeGLProgram
 
-		makePrecompiledLua = false, -- turn on precompilation of lua files
-		usePrecompiledLua = false, -- turn on use of precompiled lua files
-		useConcatenatedLua = false, -- turn on use of concatenated precompiled lua files
-	}
-}
+--------------------------------------------------------------------------------
+-- Public API
+--------------------------------------------------------------------------------
+--[[
+/*
+Create a Shader program (base class object), specifying arbitrary input values.
+@return The created Shader program.
+*/
+--]]
+function director:createGLProgram()
+    local n = quick.QNodeGLProgram()
+    n:_createCCGLProgram()
+    return n
+end

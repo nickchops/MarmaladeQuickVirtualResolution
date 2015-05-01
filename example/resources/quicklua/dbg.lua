@@ -28,6 +28,7 @@ dbg.TYPECHECKING = config.debug.typeChecking
 dbg.ASSERTDIALOGS = config.debug.assertDialogs
 dbg.MAKEPRECOMPILEDLUA = config.debug.makePrecompiledLua
 dbg.USEPRECOMPILEDLUA = config.debug.usePrecompiledLua
+dbg.USECONCATENATEDLUA = config.debug.useConcatenatedLua
 
 -- Print
 dbg.print = function(...)
@@ -278,7 +279,7 @@ end
 
 -- Print types of arguments
 table.printArgs = function(...)
-    argt = {...}
+    local argt = {...}
     print("Num args: " .. table.maxn(argt))
     for i=1,table.maxn(argt) do
         print("Arg " .. i .. " is type " .. type(argt[i]))
@@ -325,14 +326,19 @@ end
     if config.debug.mock_tolua == false then
       function dofile(file)
           if (string.find(file, ".luac") ~= nil) then
-              local f, r = loadfile(file)
+              local f, r = loadfile("luac://" .. file)
               if tostring(f) == "nil" then
-                  dbg.assert(false, "Failed to load Luac file '" .. file .. "', with error:\r\n" .. dbg.getProcessedError(r or ""))
-                  return nil
+                  local f, r = loadfile(file)
+                  if tostring(f) == "nil" then
+                    dbg.assert(false, "Failed to load Luac file '" .. file .. "', with error:\r\n" .. dbg.getProcessedError(r or ""))
+                    return nil
+                  else
+                    return f()
+                  end
               else
                   return f()
               end
-		  end
+          end
 
           if (config.debug.makePrecompiledLua) then
               if (quick.MainLuaPrecompileFile(file) == false) then
@@ -342,15 +348,20 @@ end
 				  -- If file was concatenated then it was not compiled separately so return nil
                   return nil
               else
-			      return dofile(file .. "c")
-			  end
+                return dofile(file .. "c")
+              end
           end
 
           if (config.debug.usePrecompiledLua == true) then
-              local f, r = loadfile(file .. "c")
+              local f, r = loadfile("luac://" .. file .. "c")
               if tostring(f) == "nil" then
-                  dbg.assert(false, "Failed to load Luac file '" .. file .. "', with error:\r\n" .. dbg.getProcessedError(r or ""))
-                  return nil
+                  local f, r = loadfile(file .. "c")
+                  if tostring(f) == "nil" then
+                    dbg.assert(false, "Failed to load Luac file '" .. file .. "', with error:\r\n" .. dbg.getProcessedError(r or ""))
+                    return nil
+                  else
+                    return f()
+                  end
               else
                   return f()
               end

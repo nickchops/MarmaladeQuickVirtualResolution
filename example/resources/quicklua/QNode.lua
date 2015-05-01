@@ -188,6 +188,7 @@ function QNode:updateTweens(dt)
 		if v.isComplete == false then
 			local remove = v:update(dt)
 			if remove == true then
+                v.target = nil
 				table.remove(self.tweens, i)
 			end
 		end
@@ -285,8 +286,29 @@ function QNode:addChild(nc)
     end
     table.insert(self.children, nc)
     nc.parent = self
-
+    nc:refreshTweens(false)
     self:_addChild(nc)
+end
+
+--[[
+/**
+This function with 'drop = true' will break back link of all tweens
+with 'drop = false' this will restore them
+Needed to GC to destroy this node end tweens linked with it
+@param drop boolean parameter
+*/
+--]]
+function QNode:refreshTweens(drop)
+    for i,v in ipairs(self.tweens) do
+        if drop then
+            v.target = nil
+        else
+            v.target = self
+        end
+	end
+    for i,v in ipairs(self.children) do
+        v:refreshTweens(drop)
+    end
 end
 
 --[[
@@ -307,7 +329,7 @@ function QNode:removeChild(nc)
             break
         end
     end
-
+    nc:refreshTweens(true)
     self:_removeChild(nc)
 end
 
@@ -374,7 +396,7 @@ function QNode:addTimer(funcortable, period, iterations, delay)
 
     local el = quick.QEventListener:new()
     QEventListener:initEventListener(el, "timer", funcortable)
-    timer = quick.QTimer:new()
+    local timer = quick.QTimer:new()
     QTimer:initTimer(timer, el, period, iterations, delay)
     timer.target = self
     table.insert(self.timers, timer)

@@ -93,7 +93,7 @@ function director:createFont(filepath)
 		error("director:createFont(values) is currently unsupported")
     else
         dbg.assertFuncVarType("string", filepath)
-        retval = n:initFromFntFile(filepath)
+        local retval = n:initFromFntFile(filepath)
 		dbg.assert(retval, "Failed to load .fnt file")
     end
 

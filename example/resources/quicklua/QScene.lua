@@ -101,7 +101,7 @@ end
 -- Create default scene. Use of global variable ensures Lua doesn't GC it.
 -- Doesn't use createScene because of extra parameters
 function director:_createDefaultScene()
-    self:createScene( { default=true } )
+    local n = self:createScene( { default=true } )
     return n
 end
 

@@ -360,6 +360,7 @@ function tween:cancel(t)
 			table.remove(t.target.tweens, i)
 		end
 	end
+    t.target = nil
 end
 
 -- Dissolve between two image objects (fade one it, the other out)

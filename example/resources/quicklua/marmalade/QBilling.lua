@@ -30,6 +30,7 @@
    - Android Market
    - Google Play v3
    - Samsung Apps
+   - Fortumo
  - BlackBerry
  - iOS
  - Windows Phone 8
@@ -46,6 +47,10 @@
  - billing:restoreTransactions() - Restores previously purchased products
  - billing:setTestMode(enable) - Sets test or live mode
  - billing:setItemRange(startItem, endItem) - Sets the item start and item end indices (Samsung only)
+ - billing:setDisplayName(display_name) - Sets the name of the product displayed by Fortumo (Fortumo only)
+ - billing:setServiceID(service_id) - Sets the service ID that is used to identiy a Fortumo service (Fortumo only)
+ - billing:setAppSecret(app_secret) - Sets the app secret that is associated with the Fortumo service (Fortumo only)
+ - billing:setConsumable(consumable) - Sets consumable or none consumable purchase (Fortumo only)
 
  Depending upon the platform a product id is defined as:
  - iOS - The Product ID as defined in the in-app purchases section of the app on Apple iTunes Connect, e.g. com.companyname.appname.itemname
@@ -113,6 +118,7 @@ billing = {}
  - android_market - Android Market
  - google_play - Google Play Billing v3 (Android 2.2 and above)
  - samsung - Samsung Apps (Android 2.3.3 and above)
+ - fortumo - Fortumo
  - blackberry - BlackBerry App World
  - ios - iOS App Store
  - wp8 - Windows Phone 8
@@ -136,6 +142,7 @@ end
  - android_market - Android Market
  - google_play - Google Play Billing v3 (Android 2.2 and above)
  - samsung - Samsung Apps (Android 2.3.3 and above)
+ - fortumo - Fortumo
  - blackberry - BlackBerry App World
  - ios - iOS App Store
  - wp8 - Windows Phone 8
@@ -243,6 +250,7 @@ end
    - Android Market
    - Google Play v3
    - Samsung Apps
+   - Fortumo
  - BlackBerry
  - iOS
  - Windows Phone 8
@@ -251,6 +259,10 @@ end
  iOS and Android:
  Begins the product restoration process to restore all none consumable products that the user has previously purchased for this application. The
  ReceiptAvailableCallback callback will be called for each product that is successfully restored, providing information about the purchase.
+
+ Fortumo:
+ Only a single product can be restored at one time. The service ID and app secret must be set for the product that is to be restored before calling
+ restoreTransactions.
 
  WP8:
  Begins the product restoration process to restore all non-finalized consumable products that the user has previously purchased for this application. The
@@ -288,7 +300,7 @@ end
  the transaction / download content before notifying the store that the purchase was successfully completed. If the app exits before the 
  purchase has been finished, the system will inform the app of the purchase again in the future. 
 
- Finishing trasactions is only required for the following platforms / vendors:
+ Finishing transactions is only required for the following platforms / vendors:
  - Android
    - Amazon
    - Android Market
@@ -351,7 +363,7 @@ end
  @brief Specifies live or test mode
 
  Test mode will allow the return of test responses, whilst live mode will carry out valid in-app purchases.
- The follow platforms and vendors are supported:
+ The following platforms and vendors are supported:
  - Android
    - Samsung Apps
  - BlackBerry
@@ -363,3 +375,72 @@ function billing:setTestMode(enable)
 	return quick.QBilling:setTestMode(enable)
 end
 
+--[[
+/**
+ @brief Sets the current product ID
+
+ Sets the ID of the current product
+
+ @param	productId	product ID.
+*/
+--]]
+function billing:setCurrentProductID(productId)
+    quick.QBilling:setCurrentProductID(productId);
+end
+
+--[[
+/**
+ @brief Sets the item display name
+
+ The display name is the name of the purchasable service that is displayed to the user when making a purchase using Fortumo
+
+ @param	displayName	Item display name.
+*/
+--]]
+function billing:setDisplayName(displayName)
+    quick.QBilling:setDisplayName(displayName);
+end
+
+--[[
+/**
+ @brief Sets the service ID
+
+ The service ID is a unique identifier that is supplied by Fortumo for the service that the user can purchase. The ID is available 
+ in the Fortumo services dashboard under the "General" tab.
+
+ @param	serviceId	The service ID.
+*/
+--]]
+function billing:setServiceID(serviceId)
+    quick.QBilling:setServiceID(serviceId);
+end
+
+--[[
+/**
+ @brief Sets the In-application secret
+
+ Sets the In-application secret that is associated with the Fortumo service. The In-application secret is available 
+ in the Fortumo services dashboard under the "General" tab.
+
+ @param	appSecret The In-application secret
+*/
+--]]
+function billing:setAppSecret(appSecret)
+    quick.QBilling:setAppSecret(appSecret);
+end
+
+--[[
+/**
+ @brief Sets the purchase type
+
+ Sets the type of purchase for the Forumo service, Possible values include:
+ - consumable - A consumable product such as coins
+ - none_consumable - A none conumable product such as additional game levels
+ - subscription - A subscription based product such as m magazine
+
+ @param	type	The purchase type
+*/
+--]]
+function billing:setPurchaseType(type)
+    return quick.QBilling:setPurchaseType(type)
+end
